@@ -1,8 +1,0 @@
-# ignore build dir
-build/
-
-# ignore vscode dir
-.vscode/
-
-#clangd
-.cache/

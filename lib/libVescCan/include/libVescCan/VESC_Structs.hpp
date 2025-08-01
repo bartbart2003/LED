@@ -1,9 +1,9 @@
 #ifndef VESC_Structs_h_
 #define VESC_Structs_h_
 
-#include <libVescCan/VESC_Defines.h>
-#include <libVescCan/VESC_Consts.h>
-#include <libVescCan/VESC_Status_10_Consts.h>
+#include <libVescCan/VESC_Defines.hpp>
+#include <libVescCan/VESC_Consts.hpp>
+#include <libVescCan/VESC_Status_10_Consts.hpp>
 
 //****
 // structs
@@ -28,45 +28,23 @@ typedef struct _VESC_RawFrame
 #error "Unsupported endiannes"
 #endif
     uint8_t can_dlc;
-    uint8_t _pad0;
-    uint8_t _res0;
-    uint8_t _res1;
+    //uint8_t _pad0;
+    //uint8_t _res0;
+    //uint8_t _res1;
 
     uint8_t rawData[VESC_CAN_DLEN_MAX];
 } _VESC_GCC_ATTRIBUTE_PACKED VESC_RawFrame;
 
 /// <summary>
 /// Frame for commanding.
-/// For commands 0-4 and 10-13 use `commandData`.
-/// For command 5 use `commandDataExB`.
-/// For command 6 use `commandDataEx_0`, `commandDataEx_1` and `commandDataEx_2`.
 /// Convert to VESC_RawFrame before sending!
 /// </summary>
 typedef struct _VESC_CommandFrame
 {
     VESC_Id_t vescID;
     VESC_Command_t command;
-    union {
-        //For commands 0-4 and 10-13
-        float commandData;
-
-		//For command 5
-		uint8_t commandDataExB;
-
-        //For command 6
-        struct {
-			//For command 6 position
-            float commandDataEx_0;
-			//For command 6 speed
-            float commandDataEx_1;
-            //For command 6 acceleration
-			float commandDataEx_2;
-        };
-
-		uint8_t _commandDataRaw[12];
-	};
+    float commandData;
 } VESC_CommandFrame;
-
 
 /// <summary>
 /// Status 1 frame
@@ -156,11 +134,10 @@ typedef struct _VESC_Status_7
 typedef struct _VESC_Status_8
 {
     VESC_Id_t vescID;
-    float weightA;
+    float weight;
     float distance;
     float humidity;
 	bool vibrations;
-	float weightB;
 } VESC_Status_8;
 
 /// <summary>
@@ -173,7 +150,6 @@ typedef struct _VESC_Status_9
     float potassium;
     float nitrogen;
     float phosphorus;
-	float ph;
 } VESC_Status_9;
 
 /// <summary>

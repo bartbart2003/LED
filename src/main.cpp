@@ -2,10 +2,7 @@
 #include <SPI.h>
 #include <NeoPixelBus.h>
 #include <mcp2515.h>
-extern "C"
-{
-  #include <libVescCan/VESC.h>
-}
+#include "libVescCan/VESC.hpp"
 
 const uint16_t numLeds = 16;
 const uint8_t pinWS = PIN_PA7;
