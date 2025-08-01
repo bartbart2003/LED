@@ -2,7 +2,10 @@
 #include <SPI.h>
 #include <NeoPixelBus.h>
 #include <mcp2515.h>
-#include "libVescCan/VESC.hpp"
+extern "C"
+{
+  #include <libVescCan/VESC.h>
+}
 
 const uint16_t numLeds = 16;
 const uint8_t pinWS = PIN_PA7;
@@ -23,6 +26,7 @@ MCP2515 mcp2515(PIN_PA4);
 struct can_frame received_can_frame;
 
 void led_estop();
+void led_sampler();
 void led_unknown();
 void led_autonomy();
 void led_driving();
@@ -99,12 +103,15 @@ void setup() {
 void loop()
 {  
   while (true) {
-    if (vesc_status_10_frame.communicationState == VESC_STATUS_10_COMMUNICATIONSTATE_FAULTED) {
+    if (vesc_status_10_frame.communicationState != VESC_STATUS_10_COMMUNICATIONSTATE_OPENED) {
       led_unknown();
       continue;
     }
     
     switch (vesc_status_10_frame.controlMode) {
+      case VESC_STATUS_10_CONTROLMODE_SAMPLER:
+        led_sampler();
+        break;
       case VESC_STATUS_10_CONTROLMODE_AUTONOMY:
         led_autonomy();
         break;
@@ -132,6 +139,20 @@ void led_estop() {
     strip.Show();
     estop_blink = !estop_blink;
     delay(random(40, 200));
+}
+
+uint8_t sampler_offset = 0;
+void led_sampler() {
+    for (uint16_t i = 0; i < 4; i++) {
+      strip.SetPixelColor(4*i, (sampler_offset != 0) ? RgbColor(255,105,180) : RgbColor(0, 127, 0));
+      strip.SetPixelColor(4*i+1, (sampler_offset != 1) ? RgbColor(255,105,180) : RgbColor(0, 127, 0));
+      strip.SetPixelColor(4*i+2, (sampler_offset != 2) ? RgbColor(255,105,180) : RgbColor(0, 127, 0));
+      strip.SetPixelColor(4*i+3, (sampler_offset != 3) ? RgbColor(255,105,180) : RgbColor(0, 127, 0));
+    }
+    strip.Show();
+    sampler_offset++;
+    if (sampler_offset > 3) sampler_offset = 0;
+    delay(200);
 }
 
 uint8_t manipulator_offset = 0;

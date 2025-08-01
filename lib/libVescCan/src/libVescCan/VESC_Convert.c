@@ -1,4 +1,5 @@
-#include <libVescCan/VESC_Convert.hpp>
+#include "libVescCan/VESC_Consts.h"
+#include <libVescCan/VESC_Convert.h>
 
 bool VESC_convertCmdToRaw(VESC_RawFrame* out, const VESC_CommandFrame* in)
 {
@@ -19,6 +20,14 @@ bool VESC_convertCmdToRaw(VESC_RawFrame* out, const VESC_CommandFrame* in)
 	case VESC_COMMAND_SET_POS:
 		_VESC_WriteRawData32(out, _VESC_OFFSET_COMMANDFRAME, in->commandData, VESC_SCALE_SET_POS);
 		break;
+	case VESC_COMMAND_SET_ORIGIN:
+		_VESC_WriteRawData8u(out, _VESC_OFFSET_COMMANDFRAME, in->commandDataExB, VESC_SCALE_NA);
+		break;
+	case VESC_COMMAND_SET_POS_SPEED_LOOP:
+		_VESC_WriteRawData32(out, _VESC_offset_PosSpeedLoop[_VESC_OFFSETIDX_POS_SPEED_LOOP_POSITION], in->commandDataEx_0, VESC_SCALE_SET_POS_SPEED_LOOP_POSITION);
+		_VESC_WriteRawData16(out, _VESC_offset_PosSpeedLoop[_VESC_OFFSETIDX_POS_SPEED_LOOP_SPEED], in->commandDataEx_1, VESC_SCALE_SET_POS_SPEED_LOOP_SPEED);
+		_VESC_WriteRawData16u(out, _VESC_offset_PosSpeedLoop[_VESC_OFFSETIDX_POS_SPEED_LOOP_ACCELERATION], in->commandDataEx_2, VESC_SCALE_SET_POS_SPEED_LOOP_ACCELERATION);
+		break;
 	case VESC_COMMAND_SET_CURRENT_REL:
 		_VESC_WriteRawData32(out, _VESC_OFFSET_COMMANDFRAME, in->commandData, VESC_SCALE_SET_CURRENT_REL);
 		break;
@@ -37,7 +46,14 @@ bool VESC_convertCmdToRaw(VESC_RawFrame* out, const VESC_CommandFrame* in)
 	out->vescID = in->vescID;
 	out->command = in->command;
 	out->_reserved = VESC_CAN_EXTID_FLAG;
-	out->can_dlc = (int8_t)sizeof(VESC_CommandData_t);
+
+	if(in->command == VESC_COMMAND_SET_ORIGIN)
+		out->can_dlc = 1;
+	else if(in->command == VESC_COMMAND_SET_POS_SPEED_LOOP)
+		out->can_dlc = 8;
+	else
+		out->can_dlc = 4;
+
 	return true;
 }
 
@@ -143,10 +159,11 @@ bool VESC_convertStatus8ToRaw(VESC_RawFrame* out, const VESC_Status_8* in)
 	out->_reserved = VESC_CAN_EXTID_FLAG;
 	out->can_dlc = VESC_CAN_STATUS_8_DLEN;
 
-	_VESC_WriteRawData16(out, _VESC_offset_Status_8[_VESC_OFFSETIDX_STATUS_8_WEIGHT], in->weight, VESC_SCALE_STATUS_8_WEIGHT);
+	_VESC_WriteRawData16(out, _VESC_offset_Status_8[_VESC_OFFSETIDX_STATUS_8_WEIGHT_A], in->weightA, VESC_SCALE_STATUS_8_WEIGHT_A);
 	_VESC_WriteRawData16(out, _VESC_offset_Status_8[_VESC_OFFSETIDX_STATUS_8_DISTANCE], in->distance, VESC_SCALE_STATUS_8_DISTANCE);
 	_VESC_WriteRawData8u(out, _VESC_offset_Status_8[_VESC_OFFSETIDX_STATUS_8_HUMIDITY], in->humidity, VESC_SCALE_STATUS_8_HUMIDITY);
 	_VESC_WriteRawData8u(out, _VESC_offset_Status_8[_VESC_OFFSETIDX_STATUS_8_VIBRATIONS], in->vibrations, VESC_SCALE_NA);
+	_VESC_WriteRawData16(out, _VESC_offset_Status_8[_VESC_OFFSETIDX_STATUS_8_WEIGHT_B], in->weightB, VESC_SCALE_STATUS_8_WEIGHT_B);
 
 	return true;
 }
@@ -161,6 +178,7 @@ bool VESC_convertStatus9ToRaw(VESC_RawFrame* out, const VESC_Status_9* in)
 	_VESC_WriteRawData16(out, _VESC_offset_Status_9[_VESC_OFFSETIDX_STATUS_9_POTASSIUM], in->potassium, VESC_SCALE_STATUS_9_POTASSIUM);
 	_VESC_WriteRawData16(out, _VESC_offset_Status_9[_VESC_OFFSETIDX_STATUS_9_NITROGEN], in->nitrogen, VESC_SCALE_STATUS_9_NITROGEN);
 	_VESC_WriteRawData16(out, _VESC_offset_Status_9[_VESC_OFFSETIDX_STATUS_9_PHOSPHORUS], in->phosphorus, VESC_SCALE_STATUS_9_PHOSPHORUS);
+	_VESC_WriteRawData16(out, _VESC_offset_Status_9[_VESC_OFFSETIDX_STATUS_9_PH], in->ph, VESC_SCALE_STATUS_9_PH);
 
 	return true;
 }
@@ -186,31 +204,39 @@ bool VESC_convertRawToCmd(VESC_CommandFrame* out, const VESC_RawFrame* in)
 	switch (in->command)
 	{
 	case VESC_COMMAND_SET_DUTY:
-		_VESC_ReadRawData32(out->commandData, in, _VESC_OFFSET_COMMANDFRAME, VESC_SCALE_SET_DUTY);
+		_VESC_ReadRawData32(out->commandData, in, _VESC_OFFSET_COMMANDFRAME, VESC_SCALE_SET_DUTY,/*none*/);
 		break;
 	case VESC_COMMAND_SET_CURRENT:
-		_VESC_ReadRawData32(out->commandData, in, _VESC_OFFSET_COMMANDFRAME, VESC_SCALE_SET_CURRENT);
+		_VESC_ReadRawData32(out->commandData, in, _VESC_OFFSET_COMMANDFRAME, VESC_SCALE_SET_CURRENT,/*none*/);
 		break;
 	case VESC_COMMAND_SET_CURRENT_BRAKE:
-		_VESC_ReadRawData32(out->commandData, in, _VESC_OFFSET_COMMANDFRAME, VESC_SCALE_SET_CURRENT_BRAKE);
+		_VESC_ReadRawData32(out->commandData, in, _VESC_OFFSET_COMMANDFRAME, VESC_SCALE_SET_CURRENT_BRAKE,/*none*/);
 		break;
 	case VESC_COMMAND_SET_RPM:
-		_VESC_ReadRawData32(out->commandData, in, _VESC_OFFSET_COMMANDFRAME, VESC_SCALE_SET_RPM);
+		_VESC_ReadRawData32(out->commandData, in, _VESC_OFFSET_COMMANDFRAME, VESC_SCALE_SET_RPM,/*none*/);
 		break;
 	case VESC_COMMAND_SET_POS:
-		_VESC_ReadRawData32(out->commandData, in, _VESC_OFFSET_COMMANDFRAME, VESC_SCALE_SET_POS);
+		_VESC_ReadRawData32(out->commandData, in, _VESC_OFFSET_COMMANDFRAME, VESC_SCALE_SET_POS,/*none*/);
+		break;
+	case VESC_COMMAND_SET_ORIGIN:
+		_VESC_ReadRawData8u(out->commandDataExB, in, _VESC_OFFSET_COMMANDFRAME, VESC_SCALE_NA, /*none*/);
+		break;
+	case VESC_COMMAND_SET_POS_SPEED_LOOP:
+		_VESC_ReadRawData32(out->commandDataEx_0, in, _VESC_offset_PosSpeedLoop[_VESC_OFFSETIDX_POS_SPEED_LOOP_POSITION], VESC_SCALE_SET_POS_SPEED_LOOP_POSITION, /*none*/);
+		_VESC_ReadRawData16(out->commandDataEx_1, in, _VESC_offset_PosSpeedLoop[_VESC_OFFSETIDX_POS_SPEED_LOOP_SPEED], VESC_SCALE_SET_POS_SPEED_LOOP_SPEED, /*none*/);
+		_VESC_ReadRawData16u(out->commandDataEx_2, in, _VESC_offset_PosSpeedLoop[_VESC_OFFSETIDX_POS_SPEED_LOOP_ACCELERATION], VESC_SCALE_SET_POS_SPEED_LOOP_ACCELERATION, /*none*/);
 		break;
 	case VESC_COMMAND_SET_CURRENT_REL:
-		_VESC_ReadRawData32(out->commandData, in, _VESC_OFFSET_COMMANDFRAME, VESC_SCALE_SET_CURRENT_REL);
+		_VESC_ReadRawData32(out->commandData, in, _VESC_OFFSET_COMMANDFRAME, VESC_SCALE_SET_CURRENT_REL,/*none*/);
 		break;
 	case VESC_COMMAND_SET_CURRENT_BRAKE_REL:
-		_VESC_ReadRawData32(out->commandData, in, _VESC_OFFSET_COMMANDFRAME, VESC_SCALE_SET_CURRENT_BRAKE_REL);
+		_VESC_ReadRawData32(out->commandData, in, _VESC_OFFSET_COMMANDFRAME, VESC_SCALE_SET_CURRENT_BRAKE_REL,/*none*/);
 		break;
 	case VESC_COMMAND_SET_CURRENT_HANDBRAKE:
-		_VESC_ReadRawData32(out->commandData, in, _VESC_OFFSET_COMMANDFRAME, VESC_SCALE_SET_CURRENT_HANDBRAKE);
+		_VESC_ReadRawData32(out->commandData, in, _VESC_OFFSET_COMMANDFRAME, VESC_SCALE_SET_CURRENT_HANDBRAKE,/*none*/);
 		break;
 	case VESC_COMMAND_SET_CURRENT_HANDBRAKE_REL:
-		_VESC_ReadRawData32(out->commandData, in, _VESC_OFFSET_COMMANDFRAME, VESC_SCALE_SET_CURRENT_HANDBRAKE_REL);
+		_VESC_ReadRawData32(out->commandData, in, _VESC_OFFSET_COMMANDFRAME, VESC_SCALE_SET_CURRENT_HANDBRAKE_REL,/*none*/);
 		break;
 	default:
 		return false;
@@ -229,9 +255,9 @@ bool VESC_convertRawToStatus1(VESC_Status_1* out, const VESC_RawFrame* in)
 
 	out->vescID = in->vescID;
 
-	_VESC_ReadRawData32(out->erpm, in, _VESC_offset_Status_1[_VESC_OFFSETIDX_STATUS_1_ERPM], VESC_SCALE_STATUS_1_ERPM);
-	_VESC_ReadRawData16(out->current, in, _VESC_offset_Status_1[_VESC_OFFSETIDX_STATUS_1_CURRENT], VESC_SCALE_STATUS_1_CURRENT);
-	_VESC_ReadRawData16(out->dutyCycle, in, _VESC_offset_Status_1[_VESC_OFFSETIDX_STATUS_1_DUTYCYCLE], VESC_SCALE_STATUS_1_DUTYCYCLE);
+	_VESC_ReadRawData32(out->erpm, in, _VESC_offset_Status_1[_VESC_OFFSETIDX_STATUS_1_ERPM], VESC_SCALE_STATUS_1_ERPM,/*none*/);
+	_VESC_ReadRawData16(out->current, in, _VESC_offset_Status_1[_VESC_OFFSETIDX_STATUS_1_CURRENT], VESC_SCALE_STATUS_1_CURRENT,/*none*/);
+	_VESC_ReadRawData16(out->dutyCycle, in, _VESC_offset_Status_1[_VESC_OFFSETIDX_STATUS_1_DUTYCYCLE], VESC_SCALE_STATUS_1_DUTYCYCLE,/*none*/);
 
 	return true;
 }
@@ -243,8 +269,8 @@ bool VESC_convertRawToStatus2(VESC_Status_2* out, const VESC_RawFrame* in)
 
 	out->vescID = in->vescID;
 
-	_VESC_ReadRawData32(out->apmHours, in, _VESC_offset_Status_2[_VESC_OFFSETIDX_STATUS_2_AMPHOURS], VESC_SCALE_STATUS_2_AMPHOURS);
-	_VESC_ReadRawData32(out->apmHoursChg, in, _VESC_offset_Status_2[_VESC_OFFSETIDX_STATUS_2_AMPHOURSCHG], VESC_SCALE_STATUS_2_AMPHOURSCHG);
+	_VESC_ReadRawData32(out->apmHours, in, _VESC_offset_Status_2[_VESC_OFFSETIDX_STATUS_2_AMPHOURS], VESC_SCALE_STATUS_2_AMPHOURS,/*none*/);
+	_VESC_ReadRawData32(out->apmHoursChg, in, _VESC_offset_Status_2[_VESC_OFFSETIDX_STATUS_2_AMPHOURSCHG], VESC_SCALE_STATUS_2_AMPHOURSCHG,/*none*/);
 
 	return true;
 }
@@ -256,8 +282,8 @@ bool VESC_convertRawToStatus3(VESC_Status_3* out, const VESC_RawFrame* in)
 
 	out->vescID = in->vescID;
 
-	_VESC_ReadRawData32(out->wattHours, in, _VESC_offset_Status_3[_VESC_OFFSETIDX_STATUS_3_WATTHOURS], VESC_SCALE_STATUS_3_WATTHOURS);
-	_VESC_ReadRawData32(out->wattHoursChg, in, _VESC_offset_Status_3[_VESC_OFFSETIDX_STATUS_3_WATTHOURSCHG], VESC_SCALE_STATUS_3_WATTHOURSCHG);
+	_VESC_ReadRawData32(out->wattHours, in, _VESC_offset_Status_3[_VESC_OFFSETIDX_STATUS_3_WATTHOURS], VESC_SCALE_STATUS_3_WATTHOURS,/*none*/);
+	_VESC_ReadRawData32(out->wattHoursChg, in, _VESC_offset_Status_3[_VESC_OFFSETIDX_STATUS_3_WATTHOURSCHG], VESC_SCALE_STATUS_3_WATTHOURSCHG,/*none*/);
 
 	return true;
 }
@@ -269,10 +295,10 @@ bool VESC_convertRawToStatus4(VESC_Status_4* out, const VESC_RawFrame* in)
 
 	out->vescID = in->vescID;
 
-	_VESC_ReadRawData16(out->tempFet, in, _VESC_offset_Status_4[_VESC_OFFSETIDX_STATUS_4_TEMPFET], VESC_SCALE_STATUS_4_TEMPFET);
-	_VESC_ReadRawData16(out->tempMotor, in, _VESC_offset_Status_4[_VESC_OFFSETIDX_STATUS_4_TEMPMOTOR], VESC_SCALE_STATUS_4_TEMPMOTOR);
-	_VESC_ReadRawData16(out->currentIn, in, _VESC_offset_Status_4[_VESC_OFFSETIDX_STATUS_4_CURRENTIN], VESC_SCALE_STATUS_4_CURRENTIN);
-	_VESC_ReadRawData16(out->pidPos, in, _VESC_offset_Status_4[_VESC_OFFSETIDX_STATUS_4_PIDPOS], VESC_SCALE_STATUS_4_PIDPOS);
+	_VESC_ReadRawData16(out->tempFet, in, _VESC_offset_Status_4[_VESC_OFFSETIDX_STATUS_4_TEMPFET], VESC_SCALE_STATUS_4_TEMPFET,/*none*/);
+	_VESC_ReadRawData16(out->tempMotor, in, _VESC_offset_Status_4[_VESC_OFFSETIDX_STATUS_4_TEMPMOTOR], VESC_SCALE_STATUS_4_TEMPMOTOR,/*none*/);
+	_VESC_ReadRawData16(out->currentIn, in, _VESC_offset_Status_4[_VESC_OFFSETIDX_STATUS_4_CURRENTIN], VESC_SCALE_STATUS_4_CURRENTIN,/*none*/);
+	_VESC_ReadRawData16(out->pidPos, in, _VESC_offset_Status_4[_VESC_OFFSETIDX_STATUS_4_PIDPOS], VESC_SCALE_STATUS_4_PIDPOS,/*none*/);
 
 	return true;
 }
@@ -284,8 +310,8 @@ bool VESC_convertRawToStatus5(VESC_Status_5* out, const VESC_RawFrame* in)
 
 	out->vescID = in->vescID;
 
-	_VESC_ReadRawData32(out->tachometer, in, _VESC_offset_Status_5[_VESC_OFFSETIDX_STATUS_5_TACHOMETER], VESC_SCALE_STATUS_5_TACHOMETER);
-	_VESC_ReadRawData16(out->voltsIn, in, _VESC_offset_Status_5[_VESC_OFFSETIDX_STATUS_5_VOLTSIN], VESC_SCALE_STATUS_5_VOLTSIN);
+	_VESC_ReadRawData32(out->tachometer, in, _VESC_offset_Status_5[_VESC_OFFSETIDX_STATUS_5_TACHOMETER], VESC_SCALE_STATUS_5_TACHOMETER,/*none*/);
+	_VESC_ReadRawData16(out->voltsIn, in, _VESC_offset_Status_5[_VESC_OFFSETIDX_STATUS_5_VOLTSIN], VESC_SCALE_STATUS_5_VOLTSIN,/*none*/);
 
 	return true;
 }
@@ -297,10 +323,10 @@ bool VESC_convertRawToStatus6(VESC_Status_6* out, const VESC_RawFrame* in)
 
 	out->vescID = in->vescID;
 
-	_VESC_ReadRawData16(out->adc1, in, _VESC_offset_Status_6[_VESC_OFFSETIDX_STATUS_6_ADC1], VESC_SCALE_STATUS_6_ADC1);
-	_VESC_ReadRawData16(out->adc2, in, _VESC_offset_Status_6[_VESC_OFFSETIDX_STATUS_6_ADC2], VESC_SCALE_STATUS_6_ADC2);
-	_VESC_ReadRawData16(out->adc3, in, _VESC_offset_Status_6[_VESC_OFFSETIDX_STATUS_6_ADC3], VESC_SCALE_STATUS_6_ADC3);
-	_VESC_ReadRawData16(out->ppm, in, _VESC_offset_Status_6[_VESC_OFFSETIDX_STATUS_6_PPM], VESC_SCALE_STATUS_6_PPM);
+	_VESC_ReadRawData16(out->adc1, in, _VESC_offset_Status_6[_VESC_OFFSETIDX_STATUS_6_ADC1], VESC_SCALE_STATUS_6_ADC1,/*none*/);
+	_VESC_ReadRawData16(out->adc2, in, _VESC_offset_Status_6[_VESC_OFFSETIDX_STATUS_6_ADC2], VESC_SCALE_STATUS_6_ADC2,/*none*/);
+	_VESC_ReadRawData16(out->adc3, in, _VESC_offset_Status_6[_VESC_OFFSETIDX_STATUS_6_ADC3], VESC_SCALE_STATUS_6_ADC3,/*none*/);
+	_VESC_ReadRawData16(out->ppm, in, _VESC_offset_Status_6[_VESC_OFFSETIDX_STATUS_6_PPM], VESC_SCALE_STATUS_6_PPM,/*none*/);
 
 	return true;
 }
@@ -312,7 +338,7 @@ bool VESC_convertRawToStatus7(VESC_Status_7* out, const VESC_RawFrame* in)
 
 	out->vescID = in->vescID;
 
-	_VESC_ReadRawData64(out->precisePos, in, _VESC_offset_Status_7[_VESC_OFFSETIDX_STATUS_7_PRECISEPOS], VESC_SCALE_STATUS_7_PRECISEPOS);
+	_VESC_ReadRawData64(out->precisePos, in, _VESC_offset_Status_7[_VESC_OFFSETIDX_STATUS_7_PRECISEPOS], VESC_SCALE_STATUS_7_PRECISEPOS,/*none*/);
 
 	return true;
 }
@@ -324,10 +350,11 @@ bool VESC_convertRawToStatus8(VESC_Status_8* out, const VESC_RawFrame* in)
 
 	out->vescID = in->vescID;
 
-	_VESC_ReadRawData16(out->weight, in, _VESC_offset_Status_8[_VESC_OFFSETIDX_STATUS_8_WEIGHT], VESC_SCALE_STATUS_8_WEIGHT);
-	_VESC_ReadRawData16(out->distance, in, _VESC_offset_Status_8[_VESC_OFFSETIDX_STATUS_8_DISTANCE], VESC_SCALE_STATUS_8_DISTANCE);
-	_VESC_ReadRawData8u(out->humidity, in, _VESC_offset_Status_8[_VESC_OFFSETIDX_STATUS_8_HUMIDITY], VESC_SCALE_STATUS_8_HUMIDITY);
-	_VESC_ReadRawData8u(out->vibrations, in, _VESC_offset_Status_8[_VESC_OFFSETIDX_STATUS_8_VIBRATIONS], VESC_SCALE_STATUS_8_VIBRATIONS);
+	_VESC_ReadRawData16(out->weightA, in, _VESC_offset_Status_8[_VESC_OFFSETIDX_STATUS_8_WEIGHT_A], VESC_SCALE_STATUS_8_WEIGHT_A,/*none*/);
+	_VESC_ReadRawData16(out->distance, in, _VESC_offset_Status_8[_VESC_OFFSETIDX_STATUS_8_DISTANCE], VESC_SCALE_STATUS_8_DISTANCE,/*none*/);
+	_VESC_ReadRawData8u(out->humidity, in, _VESC_offset_Status_8[_VESC_OFFSETIDX_STATUS_8_HUMIDITY], VESC_SCALE_STATUS_8_HUMIDITY,/*nope*/);
+	_VESC_ReadRawData8u(out->vibrations, in, _VESC_offset_Status_8[_VESC_OFFSETIDX_STATUS_8_VIBRATIONS], VESC_SCALE_STATUS_8_VIBRATIONS,/*nope*/);
+	_VESC_ReadRawData16(out->weightB, in, _VESC_offset_Status_8[_VESC_OFFSETIDX_STATUS_8_WEIGHT_B], VESC_SCALE_STATUS_8_WEIGHT_B,/*none*/);
 
 	return true;
 }
@@ -339,9 +366,10 @@ bool VESC_convertRawToStatus9(VESC_Status_9* out, const VESC_RawFrame* in)
 
 	out->vescID = in->vescID;
 
-	_VESC_ReadRawData16(out->potassium, in, _VESC_offset_Status_9[_VESC_OFFSETIDX_STATUS_9_POTASSIUM], VESC_SCALE_STATUS_9_POTASSIUM);
-	_VESC_ReadRawData16(out->nitrogen, in, _VESC_offset_Status_9[_VESC_OFFSETIDX_STATUS_9_NITROGEN], VESC_SCALE_STATUS_9_NITROGEN);
-	_VESC_ReadRawData16(out->phosphorus, in, _VESC_offset_Status_9[_VESC_OFFSETIDX_STATUS_9_PHOSPHORUS], VESC_SCALE_STATUS_9_PHOSPHORUS);
+	_VESC_ReadRawData16(out->potassium, in, _VESC_offset_Status_9[_VESC_OFFSETIDX_STATUS_9_POTASSIUM], VESC_SCALE_STATUS_9_POTASSIUM,/*none*/);
+	_VESC_ReadRawData16(out->nitrogen, in, _VESC_offset_Status_9[_VESC_OFFSETIDX_STATUS_9_NITROGEN], VESC_SCALE_STATUS_9_NITROGEN,/*none*/);
+	_VESC_ReadRawData16(out->phosphorus, in, _VESC_offset_Status_9[_VESC_OFFSETIDX_STATUS_9_PHOSPHORUS], VESC_SCALE_STATUS_9_PHOSPHORUS,/*none*/);
+	_VESC_ReadRawData16(out->ph, in, _VESC_offset_Status_9[_VESC_OFFSETIDX_STATUS_9_PH], VESC_SCALE_STATUS_9_PH,/*none*/);
 
 	return true;
 }
@@ -353,9 +381,9 @@ bool VESC_convertRawToStatus10(VESC_Status_10* out, const VESC_RawFrame* in)
 
 	out->vescID = in->vescID;
 
-	_VESC_ReadRawData8uEnum(out->flags, in, _VESC_offset_Status_10[_VESC_OFFSETIDX_STATUS_10_FLAGS]);
-	_VESC_ReadRawData8uEnum(out->communicationState, in, _VESC_offset_Status_10[_VESC_OFFSETIDX_STATUS_10_COMMUNICATIONSTATE]);
-	_VESC_ReadRawData8uEnum(out->controlMode, in, _VESC_offset_Status_10[_VESC_OFFSETIDX_STATUS_10_CONTROLMODE]);
+	_VESC_ReadRawData8u(out->flags, in, _VESC_offset_Status_10[_VESC_OFFSETIDX_STATUS_10_FLAGS], VESC_SCALE_STATUS_10_FLAGS,/*nope*/);
+	_VESC_ReadRawData8u(out->communicationState, in, _VESC_offset_Status_10[_VESC_OFFSETIDX_STATUS_10_COMMUNICATIONSTATE], VESC_SCALE_STATUS_10_COMMUNICATIONSTATE,(VESC_Status_10_CommunicationState));
+	_VESC_ReadRawData8u(out->controlMode, in, _VESC_offset_Status_10[_VESC_OFFSETIDX_STATUS_10_CONTROLMODE], VESC_SCALE_STATUS_10_CONTROLMODE,(VESC_Status_10_ControlMode));
 
 	return true;
 }
