@@ -16,7 +16,7 @@ const uint8_t pinWS = PIN_PA7;
 
 VESC_Status_10 vesc_status_10_frame = {0};
 
-NeoPixelBus<NeoGrbFeature, NeoWs2812Method> strip(numLeds, pinWS);
+NeoPixelBus<NeoGrbFeature, Neo400KbpsMethod> strip(numLeds, pinWS);
 
 MCP2515 mcp2515(PIN_PA4);
 
